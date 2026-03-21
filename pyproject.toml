@@ -1,0 +1,14 @@
+[project]
+name = "livekit-agent-env"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "livekit-agents[cambai,cartesia,groq,openai,silero,turn-detector]~=1.4",
+    "livekit-plugins-noise-cancellation~=0.2",
+    "python-dotenv>=1.2.1",
+]
+
+[tool.uv.workspace]
+members = [
+    "medical-ai-triage",
+]
