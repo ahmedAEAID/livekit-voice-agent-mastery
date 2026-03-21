@@ -56,8 +56,8 @@ Bring your own AI models!
 ### 2. Installation
 Clone the repository and install dependencies:
 ```bash
-git clone [https://github.com/your-username/livekit-agent-mastery.git](https://github.com/your-username/livekit-agent-mastery.git)
-cd livekit-agent-mastery
+git clone https://github.com/ahmedAEAID/livekit-voice-agent-mastery.git
+cd livekit-voice-agent-mastery
 uv sync
 ```
 
