@@ -1,0 +1,33 @@
+name: Quality
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --locked --dev
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format check
+        run: uv run ruff format --check .
+
+      - name: Tests
+        run: uv run pytest
+
+      - name: Compile lessons
+        run: uv run python -m compileall -q livekit_mastery 01_basics 02_tasks_and_workflows 03_routing_and_handoffs 04_rpc_communication 05_custom_plugins
