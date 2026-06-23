@@ -47,6 +47,7 @@ concept it teaches.
 | 7 | Testing and evals | `06_testing_and_evals/eval_assistant.py` |
 | 8 | Observability and usage metrics | `07_observability/usage_metrics_agent.py` |
 | 9 | Telephony (inbound SIP) | `08_telephony/sip_inbound_agent.py` |
+| 10 | Browser web demo (visible RPC) | `09_web_demo/server.py` |
 
 See [the full learning guide](docs/learning_path.md) for objectives, exercises,
 and expected behavior.
@@ -118,6 +119,24 @@ uv run 04_rpc_communication/mock_ui_client.py
 
 The mock UI registers `show_confirmation`; the agent calls it when a visible
 confirmation is required.
+
+## Trying the lessons
+
+You usually do **not** need a frontend:
+
+- **`console` mode** is the simplest way to try any voice lesson — it runs the
+  agent locally and uses your terminal's microphone and speaker:
+
+  ```bash
+  uv run 01_basics/basic_agent.py console
+  ```
+
+- **Browser web demo** (lesson 10) gives you a real web UI and renders the RPC
+  confirmation dialog visually. See [`09_web_demo/`](09_web_demo/).
+
+These lessons dispatch a **named** agent (`agent_name=...`), so the hosted
+Agents Playground needs an explicit dispatch rule to connect. `console` mode and
+the web demo (whose token dispatches the agent for you) avoid that setup.
 
 ## Shared modules
 

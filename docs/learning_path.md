@@ -121,6 +121,16 @@ end-to-end requires a SIP trunk and dispatch rule (see the lesson README).
 
 Exercise: add a `transfer_to_human` tool that warm-transfers the caller.
 
+## 9. Browser web demo
+
+`09_web_demo/server.py` serves a tiny static page (LiveKit JS client over a CDN)
+plus a `/token` endpoint that dispatches the named `standard_agent`. It lets you
+talk to the agent from a browser and, paired with the lesson 4 RPC agent, shows
+the `show_confirmation` dialog rendering for real — the piece the terminal mock
+client cannot show.
+
+Exercise: add a transcript panel that displays the conversation as text.
+
 ## Suggested capstone
 
 Build a support agent that:
