@@ -7,25 +7,53 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <main class="card">
-      <h1>Voice Agent Demo</h1>
+    <main class="app">
+      <header class="app-header">
+        <div class="title-row">
+          <span class="logo-dot"></span>
+          <h1>Voice Agent Demo</h1>
+        </div>
+        <span id="status-pill" class="pill pill-idle">Not connected</span>
+      </header>
+
       <p class="subtitle">
-        Talk to the agent in your browser. When the agent needs a decision, a
-        confirmation dialog appears here — that is a real RPC call from the agent.
+        Talk to the agent in your browser. Watch the activity log to see audio,
+        the agent joining, and <strong>RPC calls in both directions</strong>.
       </p>
 
-      <button id="connect" class="btn primary">Connect &amp; talk</button>
-      <button id="disconnect" class="btn" hidden>Hang up</button>
+      <section class="panel">
+        <div class="controls">
+          <button id="connect" class="btn primary">Connect &amp; talk</button>
+          <button id="disconnect" class="btn" hidden>Hang up</button>
+        </div>
 
-      <p id="status" class="status">Not connected.</p>
+        <!-- Agent audio is attached here at runtime. -->
+        <div id="audio" aria-hidden="true"></div>
+      </section>
 
-      <!-- Agent audio is attached here at runtime. -->
-      <div id="audio" aria-hidden="true"></div>
+      <section class="panel rpc-panel" id="rpc-panel" hidden>
+        <h2>Call the agent (frontend → agent RPC)</h2>
+        <p class="hint">
+          Sends an <code>agent.state</code> RPC to create a note in the agent's
+          session. Works with <code>04_rpc_communication/rpc_from_frontend.py</code>.
+        </p>
+        <div class="rpc-form">
+          <input id="note-title" type="text" placeholder="Note title" value="Shopping" />
+          <input id="note-content" type="text" placeholder="Note content" value="Milk and eggs" />
+          <button id="send-rpc" class="btn">Create note</button>
+        </div>
+      </section>
+
+      <section class="panel log-panel">
+        <h2>Activity log</h2>
+        <ul id="log" class="log"></ul>
+      </section>
     </main>
 
-    <!-- RPC confirmation modal, hidden until the agent calls show_confirmation. -->
+    <!-- RPC confirmation modal (agent → frontend), hidden until called. -->
     <div id="modal" class="modal-backdrop" hidden>
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-message">
+        <p class="modal-tag">Agent is asking</p>
         <p id="modal-message" class="modal-message"></p>
         <div class="modal-actions">
           <button id="confirm-yes" class="btn primary">Yes</button>

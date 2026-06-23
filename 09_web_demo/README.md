@@ -24,20 +24,34 @@ from a CDN, plus a small Python server that mints a token and serves the files.
 You need two terminals: one for the agent, one for this server.
 
 ```bash
-# Terminal 1 — the RPC agent (registers the named "standard_agent")
-uv run 04_rpc_communication/rpc_to_frontend.py dev
+# Terminal 1 — an agent that registers the named "standard_agent"
+uv run 04_rpc_communication/rpc_to_frontend.py dev    # agent -> frontend RPC
+# or
+uv run 04_rpc_communication/rpc_from_frontend.py dev  # frontend -> agent RPC
 
 # Terminal 2 — the web demo
 uv run 09_web_demo/server.py
 ```
 
-Open <http://localhost:8080>, click **Connect & talk**, and allow microphone
-access. The agent greets you; when it needs a decision it calls
-`show_confirmation`, and the **Yes/No** dialog appears in the page. Your choice
-is returned to the agent over RPC.
+> **Open <http://localhost:8080>, not `0.0.0.0:8080`.** Browsers only expose the
+> microphone on a secure context (https or `localhost`), so `0.0.0.0` silently
+> blocks the mic and the agent never hears you. The page warns you if this
+> happens.
 
-> Any other lesson that uses `agent_name="standard_agent"` works here too — the
-> token dispatches that agent into the room.
+Click **Connect & talk** and allow microphone access. The activity log shows
+each step (connect, agent joining, audio, RPC).
+
+### RPC in both directions
+
+- **Agent → frontend:** run `rpc_to_frontend.py`. When the agent needs a
+  decision it calls `show_confirmation` and a **Yes/No** dialog appears; your
+  answer is returned to the agent.
+- **Frontend → agent:** run `rpc_from_frontend.py`. Use the **Create note**
+  panel to send an `agent.state` RPC; the agent stores the note and replies with
+  a status message shown in the log.
+
+> Any lesson that uses `agent_name="standard_agent"` works here — the token
+> dispatches that agent into the room.
 
 ## How it connects
 
