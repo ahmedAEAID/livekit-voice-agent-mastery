@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LiveKit Voice Agent Demo</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="card">
+      <h1>Voice Agent Demo</h1>
+      <p class="subtitle">
+        Talk to the agent in your browser. When the agent needs a decision, a
+        confirmation dialog appears here — that is a real RPC call from the agent.
+      </p>
+
+      <button id="connect" class="btn primary">Connect &amp; talk</button>
+      <button id="disconnect" class="btn" hidden>Hang up</button>
+
+      <p id="status" class="status">Not connected.</p>
+
+      <!-- Agent audio is attached here at runtime. -->
+      <div id="audio" aria-hidden="true"></div>
+    </main>
+
+    <!-- RPC confirmation modal, hidden until the agent calls show_confirmation. -->
+    <div id="modal" class="modal-backdrop" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-message">
+        <p id="modal-message" class="modal-message"></p>
+        <div class="modal-actions">
+          <button id="confirm-yes" class="btn primary">Yes</button>
+          <button id="confirm-no" class="btn">No</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
