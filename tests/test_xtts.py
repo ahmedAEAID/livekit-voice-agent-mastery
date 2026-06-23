@@ -7,5 +7,6 @@ def test_xtts_endpoint_normalizes_trailing_slash() -> None:
         speaker_wav="female.wav",
     )
 
-    assert provider.endpoint == "http://localhost:8044/tts_to_audio/"
+    assert provider.endpoint == "http://localhost:8044/tts_stream"
     assert provider.language == "en"
+    assert provider.stream_chunk_size == 150
