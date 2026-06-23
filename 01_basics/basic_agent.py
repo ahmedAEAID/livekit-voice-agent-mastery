@@ -1,11 +1,13 @@
-from dotenv import load_dotenv
+"""Lesson 1: build the smallest useful voice agent.
 
-from livekit import agents, rtc
-from livekit.agents import AgentServer,AgentSession, Agent, room_io
-from livekit.plugins import noise_cancellation, silero
-from livekit.plugins.turn_detector.multilingual import MultilingualModel
+Run:
+    uv run 01_basics/basic_agent.py dev
+"""
 
-load_dotenv(".env.local")
+from livekit import agents
+from livekit.agents import Agent, AgentServer, room_io
+
+from livekit_mastery import create_session
 
 
 class Assistant(Agent):
@@ -17,17 +19,13 @@ class Assistant(Agent):
             You are curious, friendly, and have a sense of humor.""",
         )
 
+
 server = AgentServer()
+
 
 @server.rtc_session(agent_name="standard_agent")
 async def my_agent(ctx: agents.JobContext):
-    session = AgentSession(
-        stt="deepgram/nova-3:multi",
-        llm="openai/gpt-4.1-mini",
-        tts="cartesia/sonic-3:9626c31c-bec5-4cca-baa8-f8ba9e84c8bc",
-        vad=silero.VAD.load(),
-        # turn_detection=MultilingualModel(),
-    )
+    session = create_session()
 
     await session.start(
         room=ctx.room,
@@ -39,9 +37,7 @@ async def my_agent(ctx: agents.JobContext):
         ),
     )
 
-    await session.generate_reply(
-        instructions="Greet the user and offer your assistance."
-    )
+    await session.generate_reply(instructions="Greet the user and offer your assistance.")
 
 
 if __name__ == "__main__":

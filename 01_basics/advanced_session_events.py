@@ -1,25 +1,26 @@
+"""Lesson 5: metrics and safe session-level error handling."""
+
 import logging
-import asyncio
-from dotenv import load_dotenv
 import pathlib
 
-from livekit import agents, rtc
+from livekit import agents
 from livekit.agents import (
-    AgentServer, AgentSession, Agent, room_io, 
-    FunctionToolsExecutedEvent, metrics, MetricsCollectedEvent, ErrorEvent,CloseEvent,
-    function_tool # <--- 1. Import function_tool here
+    Agent,
+    AgentServer,
+    ErrorEvent,
+    FunctionToolsExecutedEvent,
+    MetricsCollectedEvent,
+    function_tool,
+    metrics,
+    room_io,
 )
-from livekit.rtc import ParticipantKind
 from livekit.agents.utils.audio import audio_frames_from_file
 
-from livekit.agents import llm
-from livekit.plugins import noise_cancellation, silero, openai, cartesia
-import os
-
-load_dotenv(".env.local")
+from livekit_mastery import create_session
 
 # Set up simple logging
 logger = logging.getLogger("voice-agent")
+
 
 class Assistant(Agent):
     def __init__(self) -> None:
@@ -42,42 +43,18 @@ class Assistant(Agent):
         logger.info(f"🌤️ Tool Called: Weather for {location}")
         return f"The weather in {location} is sunny and 25 degrees Celsius."
 
+
 server = AgentServer()
+
 
 @server.rtc_session(agent_name="standard_agent")
 async def my_agent(ctx: agents.JobContext):
-    # Initialize Session
-    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-    MODEL_NAME_LLM = os.getenv('MODEL_NAME_LLM')
-    OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
-    STT_BASE_URL=os.getenv("STT_BASE_URL")
-    STT_MODEL_ID=os.getenv("STT_MODEL_ID")
-    STT_API_KEY=os.getenv("STT_API_KEY")
-    
-    TTS_BASE_URL=os.getenv("TTS_BASE_URL")
-    TTS_MODEL_ID=os.getenv("TTS_MODEL_ID")
-    TTS_API_KEY=os.getenv("TTS_API_KEY")
-    
-    session = AgentSession(
-        stt=openai.STT(model=STT_MODEL_ID,
-                       api_key=STT_API_KEY,
-                       base_url=STT_BASE_URL),
-        llm=openai.LLM(model=MODEL_NAME_LLM,
-                       api_key=OPENAI_API_KEY,
-                       base_url=OPENAI_BASE_URL),
-        tts=cartesia.TTS(model=TTS_MODEL_ID,
-                     voice="f786b574-daa5-4673-aa0c-cbe3e8534c02",
-                     api_key=TTS_API_KEY),
-        vad=silero.VAD.load(),
-        user_away_timeout=30.0 
-    )
+    session = create_session(user_away_timeout=30.0)
 
     # Initialize UsageCollector
     usage_collector = metrics.UsageCollector()
 
     # --- EVENT LISTENERS ---
-
-    
 
     @session.on("function_tools_executed")
     def on_function_tools_executed(event: FunctionToolsExecutedEvent):
@@ -97,17 +74,19 @@ async def my_agent(ctx: agents.JobContext):
 
         # 2. Real-time Analysis
         # We access metrics via the 'metrics' module we imported
-        
+
         # A. LLM Usage
         if isinstance(event.metrics, metrics.LLMMetrics):
-            logger.info(f"💰 LLM Cost: {event.metrics.prompt_tokens} prompt + {event.metrics.completion_tokens} completion tokens.")
+            logger.info(
+                f"💰 LLM Cost: {event.metrics.prompt_tokens} prompt + {event.metrics.completion_tokens} completion tokens."
+            )
 
         # B. TTS Latency
         elif isinstance(event.metrics, metrics.TTSMetrics):
             logger.info(f"⚡ TTS Speed: {event.metrics.ttfb}ms to first byte.")
-            
+
         elif isinstance(event.metrics, metrics.STTMetrics):
-             logger.debug(f"🎤 STT Activity detected.")
+            logger.debug("🎤 STT Activity detected.")
 
     # 3. Log the full session summary when the agent shuts down
     async def log_usage():
@@ -115,9 +94,9 @@ async def my_agent(ctx: agents.JobContext):
         logger.info(f"📊 Session Summary: {summary}")
 
     ctx.add_shutdown_callback(log_usage)
-    
-    custom_error_audio = os.path.join(pathlib.Path(__file__).parent.absolute(), "error_message.ogg")
-    
+
+    custom_error_audio = pathlib.Path(__file__).with_name("error_message.ogg")
+
     # @session.on("error")
     # def on_error(ev: ErrorEvent):
     #     """
@@ -149,21 +128,17 @@ async def my_agent(ctx: agents.JobContext):
     #     )
     @session.on("error")
     def on_error(ev: ErrorEvent):
-        # if ev.error.recoverable:
-        #     return
+        if getattr(ev.error, "recoverable", False):
+            logger.warning("Recoverable session error: %s", ev.error)
+            return
+        logger.error("Unrecoverable session error: %s", ev.error)
+        if custom_error_audio.exists():
+            session.say(
+                "I'm having trouble connecting right now.",
+                audio=audio_frames_from_file(str(custom_error_audio)),
+                allow_interruptions=False,
+            )
 
-        logger.info(f"session is closing due to unrecoverable error {ev.error}, {custom_error_audio}")
-
-        # To bypass the TTS service in case it's unavailable, we use a custom audio file instead
-        session.say(
-            "I'm having trouble connecting right now. Let me transfer your call.",
-            audio=audio_frames_from_file(custom_error_audio),
-            allow_interruptions=False,
-        )
-        logger.error(f"🚨 UNRECOVERABLE ERROR: {ev.error}")
-    
-    
-    
     # --- START SESSION ---
     await session.start(
         room=ctx.room,
@@ -171,9 +146,8 @@ async def my_agent(ctx: agents.JobContext):
         room_options=room_io.RoomOptions(),
     )
 
-    # await session.generate_reply(instructions="Greet the user.")
-    bad_instruction = "Greet the user. " * 50000
-    await session.generate_reply(instructions=bad_instruction)
+    await session.generate_reply(instructions="Greet the user and offer your assistance.")
+
 
 if __name__ == "__main__":
     agents.cli.run_app(server)

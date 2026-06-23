@@ -1,29 +1,36 @@
-import os
+"""Create a participant token that explicitly dispatches a named agent.
+
+Run:
+    uv run 03_routing_and_handoffs/token_dispatching.py
+"""
+
 from livekit.api import (
     AccessToken,
-    VideoGrants,
+    RoomAgentDispatch,
     RoomConfiguration,
-    RoomAgentDispatch
+    VideoGrants,
 )
 
-# Ensure these are set in your environment variables, or pass them directly to AccessToken()
-LIVEKIT_URL="wss://hr-meeting-c6qias2x.livekit.cloud"
-LIVEKIT_API_KEY="API8JwBWbfBDnSX"
-LIVEKIT_API_SECRET="Kezc1wge9880KMeDyJRHXM2xQ48dNB29UzR4DXm3rrHB"
-os.environ["LIVEKIT_API_KEY"] = LIVEKIT_API_KEY
-os.environ["LIVEKIT_API_SECRET"] = LIVEKIT_API_SECRET
+from livekit_mastery import get_settings
 
-def create_token_with_agent_dispatch(room_name: str) -> str:
+
+def create_token_with_agent_dispatch(
+    room_name: str,
+    *,
+    identity: str = "learning-participant",
+    agent_name: str = "standard_agent",
+) -> str:
+    settings = get_settings()
     token = (
-        AccessToken()
-        .with_identity("my-participant2")
+        AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
+        .with_identity(identity)
         .with_grants(VideoGrants(room_join=True, room=room_name))
         .with_room_config(
             RoomConfiguration(
                 agents=[
                     RoomAgentDispatch(
-                        agent_name="Finn-agent", 
-                        metadata='{"user_id": "12345"}'
+                        agent_name=agent_name,
+                        metadata='{"source": "token-dispatch-lesson"}',
                     )
                 ],
             ),
@@ -32,6 +39,8 @@ def create_token_with_agent_dispatch(room_name: str) -> str:
     )
     return token
 
+
 if __name__ == "__main__":
     jwt = create_token_with_agent_dispatch("my-room")
-    print(f"Generated Token:\n{jwt}")
+    print("Token generated successfully.")
+    print("For safety, this lesson does not print the JWT. Inspect it only in a secure debugger.")

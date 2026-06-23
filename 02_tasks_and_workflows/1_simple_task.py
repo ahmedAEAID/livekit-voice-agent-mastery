@@ -1,22 +1,24 @@
-import logging
+"""Lesson: gate a conversation behind an explicit consent task."""
+
 import asyncio
-from dotenv import load_dotenv
-import pathlib
-import os
+import logging
 
-from livekit import api, agents, rtc
+from livekit import agents
 from livekit.agents import (
-    AgentServer, AgentSession, Agent, room_io, 
-    FunctionToolsExecutedEvent, metrics, MetricsCollectedEvent, 
-    function_tool, AgentTask, get_job_context
+    Agent,
+    AgentServer,
+    AgentTask,
+    MetricsCollectedEvent,
+    function_tool,
+    get_job_context,
+    metrics,
 )
-from livekit.agents.utils.audio import audio_frames_from_file
-from livekit.plugins import silero, openai, cartesia
 
-load_dotenv(".env.local")
+from livekit_mastery import create_session
 
 # Set up logging
 logger = logging.getLogger("agent-task")
+
 
 class CollectConsent(AgentTask[bool]):
     def __init__(self, chat_ctx=None):
@@ -50,6 +52,7 @@ class CollectConsent(AgentTask[bool]):
         logger.info("❌ Consent denied by user.")
         self.complete(False)
 
+
 class CustomerServiceAgent(Agent):
     def __init__(self):
         super().__init__(instructions="You are a friendly customer service representative.")
@@ -70,39 +73,23 @@ class CustomerServiceAgent(Agent):
             await self.session.generate_reply(
                 instructions="The user refused. Politely explain you cannot proceed without recording and say goodbye."
             )
-            
+
             # Wait a few seconds for the audio to finish before hanging up
-            await asyncio.sleep(5) 
+            await asyncio.sleep(5)
             job_ctx = get_job_context()
             # await job_ctx.api.room.delete_room(api.DeleteRoomRequest(room=job_ctx.room.name))
             job_ctx.shutdown()
 
+
 server = AgentServer()
+
 
 @server.rtc_session(agent_name="customer_support")
 async def my_agent(ctx: agents.JobContext):
     await ctx.connect()
-    
-    session = AgentSession(
-        stt=openai.STT(
-            model=os.getenv("STT_MODEL_ID"),
-            api_key=os.getenv("STT_API_KEY"),
-            base_url=os.getenv("STT_BASE_URL")
-        ),
-        llm=openai.LLM(
-            model=os.getenv("MODEL_NAME_LLM"),
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_BASE_URL")
-        ),
-        tts=cartesia.TTS(
-            model=os.getenv("TTS_MODEL_ID"),
-            voice="f786b574-daa5-4673-aa0c-cbe3e8534c02",
-            api_key=os.getenv("TTS_API_KEY")
-        ),
-        vad=silero.VAD.load(),
-        user_away_timeout=30.0 
-    )
-    
+
+    session = create_session(user_away_timeout=30.0)
+
     usage_collector = metrics.UsageCollector()
 
     @session.on("metrics_collected")
@@ -115,6 +102,7 @@ async def my_agent(ctx: agents.JobContext):
         room=ctx.room,
         agent=CustomerServiceAgent(),
     )
-    
+
+
 if __name__ == "__main__":
     agents.cli.run_app(server)

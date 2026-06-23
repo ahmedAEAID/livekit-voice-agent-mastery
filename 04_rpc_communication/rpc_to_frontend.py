@@ -1,47 +1,30 @@
 import logging
-import asyncio
-from dotenv import load_dotenv
-import pathlib
-import json
-import uuid
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any
 
 from livekit import agents, rtc
 from livekit.agents import (
-    AgentServer, AgentSession, Agent, room_io, 
-    FunctionToolsExecutedEvent, metrics, MetricsCollectedEvent, ErrorEvent,CloseEvent,
-    function_tool # <--- 1. Import function_tool here
+    Agent,
+    AgentServer,
+    MetricsCollectedEvent,
+    RunContext,
+    function_tool,
+    metrics,
+    room_io,
 )
-from livekit.agents import JobContext, WorkerOptions, cli, Agent, AgentSession, inference, RunContext, function_tool
 
-from livekit.agents import llm
-from livekit.plugins import noise_cancellation, silero, openai, cartesia
-import os
-
-load_dotenv(".env.local")
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-MODEL_NAME_LLM = os.getenv('MODEL_NAME_LLM')
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
-STT_BASE_URL=os.getenv("STT_BASE_URL")
-STT_MODEL_ID=os.getenv("STT_MODEL_ID")
-STT_API_KEY=os.getenv("STT_API_KEY")
-
-TTS_BASE_URL=os.getenv("TTS_BASE_URL")
-TTS_MODEL_ID=os.getenv("TTS_MODEL_ID")
-TTS_API_KEY=os.getenv("TTS_API_KEY")
+from livekit_mastery import create_session
 
 # Set up simple logging
 logger = logging.getLogger("voice-agent")
 
 
-
 @dataclass
 class UserSessionData:
-    data_objects: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    room: Optional[rtc.Room] = None
-    remote_participants_identities: list = field(default_factory=list)
+    data_objects: dict[str, dict[str, Any]] = field(default_factory=dict)
+    room: rtc.Room | None = None
+    remote_participants_identities: list[str] = field(default_factory=list)
+
 
 class RPCStateAgent(Agent):
     def __init__(self) -> None:
@@ -63,55 +46,46 @@ class RPCStateAgent(Agent):
                 - Maintain a friendly, curious, and slightly humorous personality.
             """,
         )
-    
+
     @function_tool
     async def confirm_action(self, context: RunContext[UserSessionData], message: str) -> str:
         """
         A tool to confirm an action with the user on their screen.
         """
-        if not context.userdata.remote_participants_identities:
+        if context.userdata.room is None or not context.userdata.remote_participants_identities:
             return "Error: No user found to confirm with."
-            
+
         participant_identity = context.userdata.remote_participants_identities[0]
-        
+
         try:
             logger.info(f"⏳ Calling RPC 'show_confirmation' for: {participant_identity}")
-            
+
             response = await context.userdata.room.local_participant.perform_rpc(
                 destination_identity=participant_identity,
-                method="show_confirmation", 
-                payload=message, 
-                response_timeout=15.0 
+                method="show_confirmation",
+                payload=message,
+                response_timeout=15.0,
             )
-            
+
             logger.info(f"✅ User responded: {response}")
             return f"The user selected: {response}"
-            
+
         except Exception as e:
             logger.error(f"❌ RPC Failed or Timeout: {e}")
             return "The user did not respond in time."
-    
+
 
 server = AgentServer()
+
 
 @server.rtc_session(agent_name="standard_agent")
 async def my_agent(ctx: agents.JobContext):
     await ctx.connect()
     # Initialize Session
-    
+
     userdata = UserSessionData()
-    
-    session = AgentSession[UserSessionData](
-        stt=openai.STT(model=STT_MODEL_ID,
-                       api_key=STT_API_KEY,
-                       base_url=STT_BASE_URL),
-        llm=openai.LLM(model=MODEL_NAME_LLM,
-                       api_key=OPENAI_API_KEY,
-                       base_url=OPENAI_BASE_URL),
-        tts=cartesia.TTS(model=TTS_MODEL_ID,
-                     voice="f786b574-daa5-4673-aa0c-cbe3e8534c02",
-                     api_key=TTS_API_KEY),
-        vad=silero.VAD.load(),
+
+    session = create_session(
         user_away_timeout=30.0,
         userdata=userdata,
     )
@@ -119,10 +93,14 @@ async def my_agent(ctx: agents.JobContext):
     logger.info(f"Participant {participant.identity} joined")
     userdata.room = ctx.room  # Store the room in userdata for later use
     userdata.remote_participants_identities.append(participant.identity)
+
+    @ctx.room.on("participant_disconnected")
+    def on_participant_disconnected(disconnected: rtc.RemoteParticipant):
+        if disconnected.identity in userdata.remote_participants_identities:
+            userdata.remote_participants_identities.remove(disconnected.identity)
+
     # Initialize UsageCollector
     usage_collector = metrics.UsageCollector()
-    
-    
 
     # --- EVENT LISTENERS ---
     @session.on("metrics_collected")
@@ -130,21 +108,20 @@ async def my_agent(ctx: agents.JobContext):
         metrics.log_metrics(event.metrics)
         usage_collector.collect(event.metrics)
         if isinstance(event.metrics, metrics.LLMMetrics):
-            logger.info(f"💰 LLM Cost: {event.metrics.prompt_tokens} prompt + {event.metrics.completion_tokens} completion tokens.")
+            logger.info(
+                f"💰 LLM Cost: {event.metrics.prompt_tokens} prompt + {event.metrics.completion_tokens} completion tokens."
+            )
         elif isinstance(event.metrics, metrics.TTSMetrics):
             logger.info(f"⚡ TTS Speed: {event.metrics.ttfb}ms to first byte.")
         elif isinstance(event.metrics, metrics.STTMetrics):
-             logger.debug(f"🎤 STT Activity detected.")
+            logger.debug("🎤 STT Activity detected.")
 
     async def log_usage():
         summary = usage_collector.get_summary()
         logger.info(f"📊 Session Summary: {summary}")
 
     ctx.add_shutdown_callback(log_usage)
-    
-    
-    
-    
+
     # --- START SESSION ---
     await session.start(
         room=ctx.room,
@@ -155,6 +132,7 @@ async def my_agent(ctx: agents.JobContext):
     # await session.generate_reply(instructions="Greet the user.")
     instruction = "Greet the user. "
     await session.generate_reply(instructions=instruction)
+
 
 if __name__ == "__main__":
     agents.cli.run_app(server)

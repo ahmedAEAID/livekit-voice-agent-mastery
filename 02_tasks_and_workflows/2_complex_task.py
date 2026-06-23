@@ -1,23 +1,26 @@
-import logging
+"""Lesson: compose consent and structured contact-information tasks."""
+
 import asyncio
-from dotenv import load_dotenv
-import pathlib
-import os
-
-from livekit import api, agents, rtc
-from livekit.agents import (
-    AgentServer, AgentSession, Agent, room_io, 
-    FunctionToolsExecutedEvent, metrics, MetricsCollectedEvent, 
-    function_tool, AgentTask, get_job_context
-)
-from livekit.agents.utils.audio import audio_frames_from_file
+import logging
 from dataclasses import dataclass
-from livekit.plugins import silero, openai, cartesia, cambai
 
-load_dotenv(".env.local")
+from livekit import agents
+from livekit.agents import (
+    Agent,
+    AgentServer,
+    AgentTask,
+    FunctionToolsExecutedEvent,
+    MetricsCollectedEvent,
+    function_tool,
+    get_job_context,
+    metrics,
+)
+
+from livekit_mastery import create_session
 
 # Set up logging
 logger = logging.getLogger("agent-task")
+
 
 class CollectConsent(AgentTask[bool]):
     def __init__(self, chat_ctx=None):
@@ -50,12 +53,14 @@ class CollectConsent(AgentTask[bool]):
         """Call this tool only when the user explicitly says no or refuses recording."""
         logger.info("❌ Consent denied by user.")
         self.complete(False)
-        
+
+
 @dataclass
 class ContactInfoResult:
     name: str
     email_address: str
     phone_number: str
+
 
 class GetContactInfoTask(AgentTask[ContactInfoResult]):
     def __init__(self, chat_ctx=None):
@@ -75,23 +80,14 @@ class GetContactInfoTask(AgentTask[ContactInfoResult]):
         )
 
     @function_tool
-    async def submit_contact_info(
-        self, 
-        name: str, 
-        email: str, 
-        phone: str
-    ) -> None:
+    async def submit_contact_info(self, name: str, email: str, phone: str) -> None:
         """Call this tool only when you have collected all three: name, email, and phone."""
         logger.info(f"💾 Saving Contact Info: {name}, {email}, {phone}")
-        
+
         # Create the result object and complete the task
-        result = ContactInfoResult(
-            name=name, 
-            email_address=email, 
-            phone_number=phone
-        )
+        result = ContactInfoResult(name=name, email_address=email, phone_number=phone)
         self.complete(result)
-        
+
 
 class CustomerServiceAgent(Agent):
     def __init__(self):
@@ -103,14 +99,16 @@ class CustomerServiceAgent(Agent):
         has_consent = await consent_task
 
         if not has_consent:
-            await self.session.generate_reply(instructions="Explain you must end the call without consent.")
+            await self.session.generate_reply(
+                instructions="Explain you must end the call without consent."
+            )
             await asyncio.sleep(5)
             get_job_context().shutdown()
             return
 
         # Step 2: Get Contact Info (The new Task)
         contact_task = GetContactInfoTask(chat_ctx=self.chat_ctx)
-        contact_info = await contact_task # Wait for the dataclass result
+        contact_info = await contact_task  # Wait for the dataclass result
 
         # Step 3: Success! Use the collected data
         logger.info(f"Final Data Collected: {contact_info}")
@@ -118,37 +116,18 @@ class CustomerServiceAgent(Agent):
             instructions=f"Thank {contact_info.name} for providing their email {contact_info.email_address}. Ask how else you can help."
         )
 
+
 server = AgentServer()
+
 
 @server.rtc_session(agent_name="customer_support")
 async def my_agent(ctx: agents.JobContext):
     await ctx.connect()
-    
-    session = AgentSession(
-        stt=openai.STT(
-            model=os.getenv("STT_MODEL_ID"),
-            api_key=os.getenv("STT_API_KEY"),
-            base_url=os.getenv("STT_BASE_URL")
-        ),
-        llm=openai.LLM(
-            model=os.getenv("MODEL_NAME_LLM"),
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_BASE_URL")
-        ),
-        # tts=cartesia.TTS(
-        #     model=os.getenv("TTS_MODEL_ID"),
-        #     voice="f786b574-daa5-4673-aa0c-cbe3e8534c02",
-        #     api_key=os.getenv("TTS_API_KEY")
-        # ),
-        tts = cambai.TTS(
-            model="mars-flash",
-            voice_id=147320,
-        ),
-        vad=silero.VAD.load(),
-        user_away_timeout=30.0 
-    )
-    
+
+    session = create_session(user_away_timeout=30.0)
+
     usage_collector = metrics.UsageCollector()
+
     @session.on("function_tools_executed")
     def on_function_tools_executed(event: FunctionToolsExecutedEvent):
         for call, output in event.zipped():
@@ -166,6 +145,7 @@ async def my_agent(ctx: agents.JobContext):
         room=ctx.room,
         agent=CustomerServiceAgent(),
     )
-    
+
+
 if __name__ == "__main__":
     agents.cli.run_app(server)
