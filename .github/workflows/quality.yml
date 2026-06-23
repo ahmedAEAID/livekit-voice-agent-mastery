@@ -30,4 +30,4 @@ jobs:
         run: uv run pytest
 
       - name: Compile lessons
-        run: uv run python -m compileall -q livekit_mastery 01_basics 02_tasks_and_workflows 03_routing_and_handoffs 04_rpc_communication 05_custom_plugins
+        run: uv run python -m compileall -q livekit_mastery 01_basics 02_tasks_and_workflows 03_routing_and_handoffs 04_rpc_communication 05_custom_plugins 06_testing_and_evals 07_observability 08_telephony

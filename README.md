@@ -45,6 +45,8 @@ concept it teaches.
 | 5 | Frontend RPC | `04_rpc_communication/` |
 | 6 | Custom TTS provider | `05_custom_plugins/use_custom_tts_agent.py` |
 | 7 | Testing and evals | `06_testing_and_evals/eval_assistant.py` |
+| 8 | Observability and usage metrics | `07_observability/usage_metrics_agent.py` |
+| 9 | Telephony (inbound SIP) | `08_telephony/sip_inbound_agent.py` |
 
 See [the full learning guide](docs/learning_path.md) for objectives, exercises,
 and expected behavior.

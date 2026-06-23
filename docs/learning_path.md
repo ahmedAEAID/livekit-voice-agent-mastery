@@ -103,6 +103,24 @@ run and skip when credentials are missing.
 
 Exercise: add eval cases for error handling, refusals, and misuse resistance.
 
+## 7. Observability and usage metrics
+
+`07_observability/usage_metrics_agent.py` subscribes to the session's
+`metrics_collected` event, logs each component's metrics with
+`metrics.log_metrics`, and aggregates them with a `UsageCollector`. A shutdown
+callback logs one `UsageSummary` for the whole session.
+
+Exercise: convert the summary into a per-call cost using provider pricing.
+
+## 8. Telephony (inbound SIP)
+
+`08_telephony/sip_inbound_agent.py` answers phone calls bridged in through a
+LiveKit SIP trunk. It swaps wideband noise cancellation for the telephony-tuned
+`BVCTelephony` and adapts the prompt for an audio-only caller. Running it
+end-to-end requires a SIP trunk and dispatch rule (see the lesson README).
+
+Exercise: add a `transfer_to_human` tool that warm-transfers the caller.
+
 ## Suggested capstone
 
 Build a support agent that:
