@@ -91,6 +91,18 @@ so readers can see how a plugin can be packaged.
 Exercise: inject a shared `aiohttp.ClientSession` and measure the latency
 difference over repeated requests.
 
+## 6. Testing and evals
+
+`06_testing_and_evals/eval_assistant.py` drives an agent through LiveKit's
+text-only test harness (`AgentSession.run(...)`) and asserts on the resulting
+events. It shows two patterns: judging a reply against an intent with an LLM
+judge, and asserting that the agent called the right function tool.
+
+These evals call a real LLM, so they are excluded from the default `pytest`
+run and skip when credentials are missing.
+
+Exercise: add eval cases for error handling, refusals, and misuse resistance.
+
 ## Suggested capstone
 
 Build a support agent that:

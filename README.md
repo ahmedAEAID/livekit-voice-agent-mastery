@@ -1,5 +1,10 @@
 # LiveKit Voice Agent Mastery
 
+[![Quality](https://github.com/ahmedAEAID/livekit-voice-agent-mastery/actions/workflows/quality.yml/badge.svg)](https://github.com/ahmedAEAID/livekit-voice-agent-mastery/actions/workflows/quality.yml)
+[![Secret scan](https://github.com/ahmedAEAID/livekit-voice-agent-mastery/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/ahmedAEAID/livekit-voice-agent-mastery/actions/workflows/secret-scan.yml)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 A practical learning path for building production-minded voice agents with
 LiveKit Agents, OpenAI-compatible LLM/STT APIs, and a custom XTTS server.
 
@@ -39,6 +44,7 @@ concept it teaches.
 | 4 | Routing and agent handoffs | `03_routing_and_handoffs/agent_handoffs.py` |
 | 5 | Frontend RPC | `04_rpc_communication/` |
 | 6 | Custom TTS provider | `05_custom_plugins/use_custom_tts_agent.py` |
+| 7 | Testing and evals | `06_testing_and_evals/eval_assistant.py` |
 
 See [the full learning guide](docs/learning_path.md) for objectives, exercises,
 and expected behavior.
@@ -138,6 +144,7 @@ The repository includes:
 
 - Ruff linting and formatting
 - Pytest tests
+- Behavioral evals with LiveKit's text-only test harness (`06_testing_and_evals/`)
 - Python compilation checks
 - GitHub Actions quality checks
 - Gitleaks secret scanning
@@ -145,3 +152,7 @@ The repository includes:
 This is a learning repository, not a drop-in production service. Production
 deployments still need authentication, persistence, rate limiting, monitoring,
 and provider-specific reliability work.
+
+## License
+
+Released under the [MIT License](LICENSE).
