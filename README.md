@@ -1,99 +1,147 @@
-# 🎙️ LiveKit Voice Agent Mastery
+# LiveKit Voice Agent Mastery
 
-Welcome to the **LiveKit Voice Agent Mastery** repository! This project serves as a comprehensive, step-by-step guide and template for building advanced, production-ready Voice AI Agents using the [LiveKit Agents Framework](https://docs.livekit.io/agents/).
+A practical learning path for building production-minded voice agents with
+LiveKit Agents, OpenAI-compatible LLM/STT APIs, and a custom XTTS server.
 
-Whether you are building a simple receptionist, a complex multi-agent handoff system, or integrating custom TTS plugins, you will find working examples and best practices here.
+The repository is intentionally organized as lessons. Start with the smallest
+agent, then move through session behavior, structured workflows, handoffs, RPC,
+and custom providers.
 
----
+## Architecture
 
-## 📂 Repository Structure
+```text
+Microphone
+   │
+   ▼
+OpenAI-compatible STT
+   │ transcript
+   ▼
+OpenAI-compatible LLM ──► tools, tasks, handoffs, RPC
+   │ response text
+   ▼
+Custom XTTS server
+   │ audio
+   ▼
+LiveKit room
+```
 
-The repository is logically structured to take you from basic concepts to advanced voice AI architectures:
+All lessons share configuration and provider setup through
+[`livekit_mastery/`](livekit_mastery/). This keeps each lesson focused on the
+concept it teaches.
 
-### `01_basics/`
-Core concepts and session setup.
-- **`basic_agent.py`**: A minimal working voice agent.
-- **`prewarming_agent.py`**: How to use prewarming for zero-latency cold starts.
-- **`session_configuration.py`**: Advanced configuration (turn detection, interruptions).
-- **`session_events.py` / `advanced_session_events.py`**: Listening and reacting to user/agent state changes.
+## Learning path
 
-### `02_tasks_and_workflows/`
-Advanced control flow and forcing the AI to collect specific information.
-- **`1_simple_task.py`**: Basic single-goal task (e.g., getting consent).
-- **`2_complex_task.py`**: Multi-step data collection (Name, Email, Phone).
-- **`3_unordered_task.py`**: Collecting information where the user can answer in any order.
-- **`4_task_groups.py`**: Executing multiple tasks sequentially using `TaskGroup`.
+| Stage | Topic | Start here |
+| --- | --- | --- |
+| 1 | Basic agent and prewarming | `01_basics/basic_agent.py` |
+| 2 | Session configuration and events | `01_basics/session_configuration.py` |
+| 3 | Tasks and structured workflows | `02_tasks_and_workflows/1_simple_task.py` |
+| 4 | Routing and agent handoffs | `03_routing_and_handoffs/agent_handoffs.py` |
+| 5 | Frontend RPC | `04_rpc_communication/` |
+| 6 | Custom TTS provider | `05_custom_plugins/use_custom_tts_agent.py` |
 
-### `03_routing_and_handoffs/`
-Multi-agent architectures.
-- **`agent_handoffs.py`**: AI-driven seamless transfer of a call from an Intake Agent -> Specialist -> Legal Agent.
-- **`token_dispatching.py`**: Forcing a specific agent to handle a specific room via LiveKit Tokens.
+See [the full learning guide](docs/learning_path.md) for objectives, exercises,
+and expected behavior.
 
-### `04_rpc_communication/`
+## Requirements
 
-![RPC Playground](docs/images/RPC_playground.png)
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/)
+- A LiveKit Cloud project or self-hosted LiveKit server
+- An OpenAI-compatible chat-completions API
+- An OpenAI-compatible audio-transcriptions API
+- An XTTS server exposing `POST /tts_to_audio/`
 
-Real-time Frontend Integration.
-- **`rpc_from_frontend.py`**: Handling Remote Procedure Calls (RPC) triggered by the user's UI.
-- **`rpc_to_frontend.py`**: The agent sending RPC to the frontend (e.g., asking the user to click "Confirm" on their screen).
-- **`mock_ui_client.py`**: A python script simulating a frontend client to test RPCs.
+The XTTS endpoint is expected to accept:
 
-### `05_custom_plugins/`
-Bring your own AI models!
-- **`custom_xtts_plugin/`**: Example of wrapping a custom XTTS API into a native LiveKit TTS Plugin.
-- **`use_custom_tts_agent.py`**: Applying the custom plugin in an active session.
+```json
+{
+  "text": "Hello",
+  "language": "en",
+  "speaker_wav": "female.wav"
+}
+```
 
----
+and return a WAV response.
 
-## 🚀 Getting Started
+## Setup
 
-### 1. Prerequisites
-- **Python 3.12+**
-- **[uv](https://github.com/astral-sh/uv)** package manager (highly recommended for speed).
-- A [LiveKit Cloud](https://cloud.livekit.io/) account (or a local LiveKit server).
-- API Keys for your AI providers (OpenAI, Deepgram, Cartesia, etc.).
-
-### 2. Installation
-Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/ahmedAEAID/livekit-voice-agent-mastery.git
 cd livekit-voice-agent-mastery
-uv sync
-```
-
-### 3\. Environment Variables
-
-Copy the example environment file and fill in your actual credentials:
-
-```bash
+uv sync --locked --dev
 cp .env.example .env.local
 ```
 
-*(Never commit your `.env.local` file\!)*
+Fill `.env.local` with your own credentials. Never commit this file.
 
-### 4\. Running an Agent
+Validate the local project:
 
-You can run any script in development mode. For example, to run the basic agent:
+```bash
+uv run ruff check .
+uv run pytest
+```
+
+## Run your first lesson
 
 ```bash
 uv run 01_basics/basic_agent.py dev
 ```
 
------
+Useful alternatives:
 
-## 📖 Documentation & Guides
+```bash
+uv run 05_custom_plugins/use_custom_tts_agent.py console
+uv run 01_basics/prewarming_agent.py download-files
+uv run 01_basics/prewarming_agent.py dev
+```
 
-Check the `/docs` folder for deeper architectural guides:
+## Running the RPC example
 
-  - [Deployment & Configuration Guide](docs/deployment_guide.md)
-  - [Agent Dispatching & Prompting Behavior](docs/day2_dispatching_and_behavior.md)
+Use two terminals:
 
------
+```bash
+# Terminal 1
+uv run 04_rpc_communication/rpc_to_frontend.py dev
 
-## 🤝 Contributing
+# Terminal 2
+uv run 04_rpc_communication/mock_ui_client.py
+```
 
-Contributions, issues, and feature requests are welcome\! Feel free to open an issue or submit a Pull Request if you have ideas to improve these examples.
+The mock UI registers `show_confirmation`; the agent calls it when a visible
+confirmation is required.
 
------
+## Shared modules
 
-*Built with ❤️ using the LiveKit Framework.*
+- `livekit_mastery/config.py`: validates `.env.local`.
+- `livekit_mastery/session.py`: creates the shared STT → LLM → XTTS pipeline.
+- `livekit_mastery/xtts.py`: adapts the XTTS HTTP endpoint to LiveKit TTS.
+
+## Security
+
+- Keep credentials only in `.env.local` or a secret manager.
+- Never print participant JWTs.
+- Generate tokens server-side and keep them short-lived.
+- Rotate any credential that has appeared in source code, logs, screenshots,
+  chat messages, or Git history.
+
+See [Security](docs/security.md) before deploying publicly.
+
+## Troubleshooting
+
+Read [Troubleshooting](docs/troubleshooting.md) for configuration errors,
+provider compatibility, XTTS failures, dispatch mismatches, and model downloads.
+
+## Project quality
+
+The repository includes:
+
+- Ruff linting and formatting
+- Pytest tests
+- Python compilation checks
+- GitHub Actions quality checks
+- Gitleaks secret scanning
+
+This is a learning repository, not a drop-in production service. Production
+deployments still need authentication, persistence, rate limiting, monitoring,
+and provider-specific reliability work.
